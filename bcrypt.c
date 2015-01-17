@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "bcrypt.h"
 #include "crypt_blowfish/ow-crypt.h"
@@ -82,7 +84,7 @@ int bcrypt_gensalt(int factor, char salt[BCRYPT_HASHSIZE])
 
 	/* Generate salt. */
 	workf = (factor < 4 || factor > 31)?12:factor;
-	aux = crypt_gensalt_rn("$2a$", workf, input, RANDBYTES,
+	aux = crypt_gensalt_rn("$2y$", workf, input, RANDBYTES,
 			       salt, BCRYPT_HASHSIZE);
 	return (aux == NULL)?5:0;
 }
@@ -94,10 +96,28 @@ int bcrypt_hashpw(const char *passwd, const char salt[BCRYPT_HASHSIZE], char has
 	return (aux == NULL)?1:0;
 }
 
+int bcrypt_needs_rehash(int factor, const char hash[BCRYPT_HASHSIZE]) {
+    char str_hash_factor[2];
+    memcpy(str_hash_factor, &hash[4], 2);
+    int int_hash_factor = atoi(str_hash_factor);
+    
+    if (int_hash_factor > 0) {
+        if (int_hash_factor != factor) {
+            // Work factor does not match, needs rehash
+            return 1;
+        } else {
+            // Work factor matches, no rehash
+            return 0;
+        }
+    } else {
+        // error
+        return -1;
+    }
+}
+
 #ifdef TEST_BCRYPT
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 
 int main()
@@ -112,7 +132,9 @@ int main()
 	const char hash1[] = "$2a$10$VEVmGHy4F4XQMJ3eOZJAUeb.MedU0W10pTPCuf53eHdKJPiSE8sMK";
 	const char hash2[] = "$2a$10$3F0BVk5t8/aoS.3ddaB3l.fxg5qvafQ9NybxcpXLzMeAt.nVWn.NO";
 
-	ret = bcrypt_gensalt(12, salt);
+    bcrypt_needs_rehash(10, hash1);
+
+	ret = bcrypt_gensalt(4, salt);
 	assert(ret == 0);
 	printf("Generated salt: %s\n", salt);
 	before = clock();

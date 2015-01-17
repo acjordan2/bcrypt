@@ -47,6 +47,16 @@ int bcrypt_hashpw(const char *passwd, const char salt[BCRYPT_HASHSIZE],
 		  char hash[BCRYPT_HASHSIZE]);
 
 /*
+ * This function expects a work factor and an existing bcrypt hash. If the work
+ * provided work factor does not match the work factor in the given hash, a rehash
+ * is needed. 
+ *
+ * Returns 1 if a rehash is needed, 0 if no rehash is needed, -1 if an invaid work 
+ * parameter was found in the hash
+ */
+int bcrypt_needs_rehash(int factor, const char hash[BCRYPT_HASHSIZE]);
+
+/*
  * Brief Example
  * -------------
  *
